@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>경복궁 스마트시티 · 자율주행차 & 드론 HMD 디지털 트윈</title>
+  <meta name="description" content="Three.js 경복궁 가상 디지털 트윈 교육용 자율주행차·드론 HMD 체험">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+  </script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar left" id="leftPanel">
+    <div class="brand"><span class="brand-mark">宮</span><div><strong>경복궁 XR 스마트시티</strong><small>GYEONGBOKGUNG · DIGITAL TWIN LAB</small></div></div>
+    <p class="caption">문화유산 디지털 트윈 시뮬레이터 · 가상 교육용</p>
+    <section class="form-card">
+      <div class="sec-title"><span class="number">01</span><h2>출발지 · 도착지 설정</h2></div>
+      <div class="tab-line"><span class="tab-dot car-dot"></span><strong>자율주행차</strong><small>가상 관리 통로</small></div>
+      <label for="carFrom">출발지</label><input id="carFrom" list="siteOptions" value="광화문" autocomplete="off">
+      <label for="carTo">도착지</label><input id="carTo" list="siteOptions" value="향원정" autocomplete="off">
+      <div class="tab-line drone-line"><span class="tab-dot drone-dot"></span><strong>무인항공기</strong><small>가상 항공 경로</small></div>
+      <label for="droneFrom">출발지</label><input id="droneFrom" list="siteOptions" value="광화문" autocomplete="off">
+      <label for="droneTo">도착지</label><input id="droneTo" list="siteOptions" value="향원정" autocomplete="off">
+      <datalist id="siteOptions">
+        <option value="광화문"><option value="흥례문"><option value="근정전"><option value="사정전">
+        <option value="경회루"><option value="강녕전"><option value="교태전"><option value="향원정">
+        <option value="건청궁"><option value="국립민속박물관"><option value="신무문">
+      </datalist>
+      <button id="same" class="subtle full">두 이동 수단에 같은 장소 적용</button>
+      <div class="two"><label class="selectLabel">드론 고도 <select id="altitude"><option value="7">7단위</option><option value="10" selected>10단위</option><option value="13">13단위</option></select></label>
+        <label class="selectLabel">재생 속도 <select id="rate"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+      <label class="check"><input type="checkbox" id="restricted" checked><span>가상 문화유산 보호구역 우회</span></label>
+      <button id="apply" class="outline full"><span>◎</span> 경로 계산 · 배치</button>
+    </section>
+    <section class="form-card">
+      <div class="sec-title"><span class="number">02</span><h2>주행 실습</h2></div>
+      <div class="two"><button id="start" class="primary">▶ 동시 출발</button><button id="pause" class="subtle">Ⅱ 일시 정지</button></div>
+      <div class="two"><button id="reset" class="subtle">↺ 초기화</button><button id="obstacle" class="subtle">▧ 장애물 추가</button></div>
+      <label class="check"><input id="night" type="checkbox"><span>야간 스마트시티 조명</span></label>
+    </section>
+    <section class="form-card">
+      <div class="sec-title"><span class="number">03</span><h2>관찰 시점</h2></div>
+      <div class="two"><button class="view active" data-view="over">도시 전체</button><button class="view" data-view="car">차량 HMD</button></div>
+      <div class="two"><button class="view" data-view="drone">드론 FPV</button><button class="view" data-view="chase">차량 추적</button></div>
+      <button id="save" class="subtle full">운행 기록 JSON 저장</button>
+    </section>
+    <div class="caution"><strong>교육용 가상 환경</strong><p>본 경로는 궁궐 내부의 실제 도로·통행 허가·드론 공역을 나타내지 않습니다. 건물 크기·장소 간 거리·신호·비행고도는 시연용으로 재구성했습니다.</p></div>
+  </aside>
+  <main class="stage" id="stage">
+    <div id="viewport"></div>
+    <div id="fallback" class="fallback"><canvas id="fallbackMap" width="700" height="650"></canvas><div class="fallback-note" id="engineMsg">Three.js 3D 엔진을 불러오는 중입니다…</div></div>
+    <div class="stage-top"><div class="stage-title"><span class="live-point"></span> GYEONGBOKGUNG <b>XR EXPERIENCE</b></div><div class="stage-sub">경복궁 디지털 트윈 · 역사 건축 + 스마트 모빌리티 가상 실습</div></div>
+    <button id="mobileOpen" class="mobile-toggle" aria-label="설정 메뉴 열기">☰ 경로 설정</button>
+    <div id="runtimeStatus" class="runtime-status" role="status">경로 계산 준비 중</div>
+    <div class="legend"><span><i class="line-car"></i> 가상 차량 경로</span><span><i class="line-drone"></i> 가상 드론 경로</span><span>마우스 드래그: 둘러보기 · 휠: 확대</span></div>
+    <div class="stage-toolbar"><button data-view="over" title="도시 전체">⌗ 전체</button><button data-view="car" title="운전석">▣ 운전석</button><button data-view="drone" title="드론 카메라">◇ 드론</button><button id="focusBtn" title="카메라 중심 복귀">⟳ 정면</button></div>
+    <div class="stage-bottom">※ 차량은 가상 통로만 이용하며, 무인항공기는 문화유산 보호를 가정한 교육용 경로로 이동합니다.</div>
+  </main>
+  <aside class="sidebar right" id="rightPanel">
+    <div class="right-head"><span class="chip">LIVE TELEMETRY</span><h2>운행 관제 대시보드</h2><p>실시간으로 변하는 차량·드론 상태를 확인합니다.</p></div>
+    <div class="readout"><div class="read-label"><span class="tab-dot car-dot"></span> 지상 자율주행차 <strong id="carState">대기</strong></div><div class="big-metric"><strong id="carSpeed">0.0</strong><span>km/h · 가상값</span></div><div class="progress-track"><div id="carProgress" class="progress-bar car"></div></div><p id="carDist">0 / 0 장면 단위</p></div>
+    <div class="readout"><div class="read-label"><span class="tab-dot drone-dot"></span> 공중 무인항공기 <strong id="droneState">대기</strong></div><div class="big-metric amber"><strong id="droneHeight">0.4</strong><span>고도 · 장면 단위</span></div><div class="progress-track"><div id="droneProgress" class="progress-bar drone"></div></div><p id="droneDist">0 / 0 장면 단위</p></div>
+    <div class="map-card"><div class="map-head">가상 궁궐 평면 위치 <span>북 ↑</span></div><canvas id="minimap" width="560" height="660"></canvas><small>실제 측량 지도·내비게이션 데이터가 아닙니다.</small></div>
+    <div class="event-card"><div class="map-head">운행 이벤트 <span id="timer">00:00</span></div><div id="events" class="events"><p>주행 이벤트가 나타납니다.</p></div></div>
+  </aside>
+</div>
+<script>
+// 외부 라이브러리가 로딩되지 않아도 빈 화면 대신 장소 배치도를 제공한다.
+(function(){
+  const canvas=document.getElementById('fallbackMap'),ctx=canvas.getContext('2d');
+  const sites=[['광화문',0,16],['흥례문',0,12.4],['근정전',0,6.6],['사정전',0,1.7],['경회루',-8,1],['강녕전',0,-3.7],['교태전',0,-7.5],['향원정',4,-13.6],['건청궁',7,-17.3],['신무문',0,-20.2]];
+  const px=x=>350+x*21,pz=z=>40+(z+23)*13.4;
+  ctx.fillStyle='#b8d5bc';ctx.fillRect(0,0,700,650);
+  ctx.fillStyle='#e8dbbd';ctx.fillRect(105,50,490,560);
+  ctx.strokeStyle='#8d8877';ctx.lineWidth=10;ctx.strokeRect(105,50,490,560);
+  ctx.fillStyle='#5aa9ad';for(const [x,z,w,h] of [[-8,1,112,85],[4,-13.6,104,75]]){ctx.beginPath();ctx.ellipse(px(x),pz(z),w/2,h/2,0,0,Math.PI*2);ctx.fill();}
+  ctx.textAlign='center';
+  for(const [name,x,z] of sites){let w=name==='경회루'||name==='향원정'?47:66,h=26;ctx.fillStyle='#a54a42';ctx.fillRect(px(x)-w/2,pz(z)-h/2,w,h);ctx.fillStyle='#233d43';ctx.fillRect(px(x)-w/2-4,pz(z)-h/2-7,w+8,8);ctx.fillStyle='#122c36';ctx.font='bold 15px sans-serif';ctx.fillText(name,px(x),pz(z)-h/2-11);}
+  window.__palaceFallbackReady=true;
+  const btn=document.getElementById('mobileOpen'),left=document.getElementById('leftPanel');
+  btn.addEventListener('click',()=>{if(!window.__gbReady)left.classList.toggle('open');});
+  document.querySelectorAll('#leftPanel button').forEach(b=>b.addEventListener('click',()=>{
+    if(window.__gbReady)return;
+    document.getElementById('engineMsg').textContent='현재 2D 로딩 진단 화면입니다. Three.js 라이브러리를 다운로드하거나 네트워크 연결 후 실행해야 3D 경로 시뮬레이션을 시작할 수 있습니다.';
+  }));
+  setTimeout(()=>{if(!window.__gbReady){document.getElementById('engineMsg').textContent='3D 라이브러리 연결에 실패했습니다. 인터넷 연결을 확인하거나 ZIP의 오프라인 실행 방법을 이용하세요. 이 이미지는 2D 안내도입니다.';}},9500);
+})();
+</script>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

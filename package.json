@@ -1,0 +1,1 @@
+{"name":"gyeongbokgung-hmd-digital-twin","version":"1.0.0","type":"module","private":true,"scripts":{"test":"node --test tests/sim.test.mjs","serve":"node server.cjs","build":"node build-single.cjs","offline":"node download-three.cjs"}}
